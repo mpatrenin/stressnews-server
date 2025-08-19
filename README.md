@@ -4,7 +4,7 @@ This is the backend API for the StressNews application. It provides news data an
 
 ## Main App
 - [StressNews Client (Live App)](https://stressnews-client-940cee89049b.herokuapp.com/)
-- [Client Source Code](https://github.com/mpatrenin/stressnews-client)
+- [Client Source Code](https://github.com/mpatrenin/nostressnews-client)
 
 ## Features
 - RESTful API for news articles
@@ -18,3 +18,4 @@ This is the backend API for the StressNews application. It provides news data an
 ## Deployment
 - Deployed on Heroku
 - See client README for deployment instructions
+
