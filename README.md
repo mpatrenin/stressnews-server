@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # StressNews Server
 
 This is the backend API for the StressNews application. It provides news data and handles requests from the client app.
@@ -19,7 +18,6 @@ This is the backend API for the StressNews application. It provides news data an
 ## Deployment
 - Deployed on Heroku
 - See client README for deployment instructions
-=======
 # StressNews Server
 
 This is the backend API for the StressNews application. It provides news data and handles requests from the client app.
@@ -40,5 +38,3 @@ This is the backend API for the StressNews application. It provides news data an
 ## Deployment
 - Deployed on Heroku
 - See client README for deployment instructions
-
->>>>>>> fed6c3aa67cebfec2c994372a4ba3cdcf498ddc7
