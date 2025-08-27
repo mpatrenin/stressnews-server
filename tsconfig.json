@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
     "compilerOptions": {
       "target": "es6",
@@ -9,4 +10,17 @@
       "skipLibCheck": true
     },
     "include": ["src/**/*"]
+=======
+{
+    "compilerOptions": {
+      "target": "es6",
+      "module": "commonjs",
+      "outDir": "./dist",
+      "rootDir": "./src",
+      "strict": true,
+      "esModuleInterop": true,
+      "skipLibCheck": true
+    },
+    "include": ["src/**/*"]
+>>>>>>> fed6c3aa67cebfec2c994372a4ba3cdcf498ddc7
   }
