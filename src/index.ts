@@ -5,7 +5,8 @@ import { fetchNews } from './services/newsService';
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+const allowedOrigin = process.env.ALLOWED_ORIGIN || 'http://localhost:3000';
+app.use(cors({ origin: allowedOrigin }));
 app.use(express.json());
 
 app.get('/api/news', async (req, res) => {
