@@ -2,6 +2,7 @@ import Parser from 'rss-parser';
 import Sentiment from 'sentiment';
 import nlp from 'compromise';
 import natural from 'natural';
+import { c } from 'formdata-node/lib/File-cfd9c54a';
 
 const parser = new Parser({ xml2js: { cdata: true } });
 const sentiment = new Sentiment();
@@ -65,6 +66,7 @@ export const fetchNews = async (): Promise<NewsItem[]> => {
   ];
 
   const fetchFeed = async (feed: string): Promise<NewsItem[]> => {
+    console.log(`Fetching feed: ${feed}`);
     const feedData = await parser.parseURL(feed);
     return Promise.all(
       feedData.items.map(async item => {
