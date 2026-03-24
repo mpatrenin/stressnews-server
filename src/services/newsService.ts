@@ -64,53 +64,57 @@ export const fetchNews = async (): Promise<NewsItem[]> => {
     'https://www.inspiremore.com/feed/', // InspireMore
   ];
 
+  const fetchFeed = async (feed: string): Promise<NewsItem[]> => {
+    const feedData = await parser.parseURL(feed);
+    return Promise.all(
+      feedData.items.map(async item => {
+        // Extract categories/tags from RSS item
+        let rssTags: string[] = [];
+        if (Array.isArray(item.categories)) {
+          rssTags = item.categories
+            .filter((cat: any) => typeof cat === 'string' || typeof cat === 'number')
+            .map((cat: any) =>
+              String(cat).trim().replace(/[.?:!,;]+$/, '').replace(/^./, (c: string) => c.toUpperCase())
+            );
+        }
+
+        // Combine NLP/keyword tags and RSS tags, deduplicate, and limit to 10
+        const nlpTags = getTagsForNews(item.title || '');
+        const tags = [...rssTags, ...nlpTags]
+          .filter((tag, idx, arr) => tag && arr.indexOf(tag) === idx)
+          .slice(0, 10);
+
+        return {
+          id: item.guid || item.link || Math.random().toString(),
+          title: decodeEntities(item.title || ''),
+          sources: [{ url: item.link || '', publisher: feedData.title || '' }],
+          stressLevel: determineStressLevel(item.title || ''),
+          date: item.pubDate || new Date().toISOString(),
+          tags: tags.length ? tags : ['General'],
+        };
+      })
+    );
+  };
+
+  // Fetch all feeds in parallel
+  const results = await Promise.allSettled(rssFeeds.map(feed => fetchFeed(feed)));
+
   const allNews: NewsItem[] = [];
   const seenUrls = new Set<string>();
 
-  // Fetch RSS news
-  for (const feed of rssFeeds) {
-    try {
-      const feedData = await parser.parseURL(feed);
-      const newsItems = await Promise.all(
-        feedData.items.map(async item => {
-          // Extract categories/tags from RSS item
-          let rssTags: string[] = [];
-          if (Array.isArray(item.categories)) {
-            rssTags = item.categories
-              .filter((cat: any) => typeof cat === 'string' || typeof cat === 'number')
-              .map((cat: any) =>
-                String(cat).trim().replace(/[.?:!,;]+$/, '').replace(/^./, (c: string) => c.toUpperCase())
-              );
-          }
-
-          // Combine NLP/keyword tags and RSS tags, deduplicate, and limit to 10
-          const nlpTags = getTagsForNews(item.title || '');
-          const tags = [...rssTags, ...nlpTags]
-            .filter((tag, idx, arr) => tag && arr.indexOf(tag) === idx)
-            .slice(0, 10);
-
-          return {
-            id: item.guid || item.link || Math.random().toString(),
-            title: decodeEntities(item.title || ''),
-            sources: [{ url: item.link || '', publisher: feedData.title || '' }],
-            stressLevel: determineStressLevel(item.title || ''),
-            date: item.pubDate || new Date().toISOString(),
-            tags: tags.length ? tags : ['General'],
-          };
-        })
-      );
-
-      newsItems.forEach(item => {
-        const url = item.sources[0].url;
-        if (!seenUrls.has(url)) {
-          seenUrls.add(url);
-          allNews.push(item);
-        }
-      });
-    } catch (error) {
-      console.error(`Failed to fetch feed ${feed}:`, error);
+  results.forEach((result, i) => {
+    if (result.status === 'rejected') {
+      console.error(`Failed to fetch feed ${rssFeeds[i]}:`, result.reason);
+      return;
     }
-  }
+    result.value.forEach(item => {
+      const url = item.sources[0].url;
+      if (!seenUrls.has(url)) {
+        seenUrls.add(url);
+        allNews.push(item);
+      }
+    });
+  });
 
   return allNews.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 };
