@@ -1,11 +1,11 @@
 import Parser from 'rss-parser';
 import Sentiment from 'sentiment';
 import nlp from 'compromise';
-import natural from 'natural';
-import { c } from 'formdata-node/lib/File-cfd9c54a';
 
 const parser = new Parser({ xml2js: { cdata: true } });
 const sentiment = new Sentiment();
+
+let cachedNews: NewsItem[] | null = null;
 
 export interface NewsItem {
   id: string;
@@ -39,6 +39,10 @@ function getTagsForNews(text: string): string[] {
 }
 
 export const fetchNews = async (): Promise<NewsItem[]> => {
+  if (cachedNews) {
+    return cachedNews;
+  }
+
   const rssFeeds = [
     // Major global events
     'https://rss.nytimes.com/services/xml/rss/nyt/World.xml', // NYT World News
@@ -118,7 +122,9 @@ export const fetchNews = async (): Promise<NewsItem[]> => {
     });
   });
 
-  return allNews.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const sorted = allNews.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  cachedNews = sorted;
+  return sorted;
 };
 
 const decodeEntities = (title: string): string => {

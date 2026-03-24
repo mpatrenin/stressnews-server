@@ -29,6 +29,16 @@ app.get('/api/news', (req, res) => __awaiter(void 0, void 0, void 0, function* (
         res.status(500).json({ error: 'Failed to fetch news' });
     }
 }));
+const REFRESH_INTERVAL_MS = 1 * 60 * 1000; // 1 minute
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    // Warm cache immediately on startup
+    (0, newsService_1.fetchNews)().catch(err => console.error('Initial cache warm-up failed:', err));
+    // Refresh cache in the background every 5 minutes
+    setInterval(() => {
+        console.log('Refreshing news cache...');
+        (0, newsService_1.fetchNews)()
+            .then(() => console.log('News cache refreshed.'))
+            .catch(err => console.error('Background cache refresh failed:', err));
+    }, REFRESH_INTERVAL_MS);
 });
