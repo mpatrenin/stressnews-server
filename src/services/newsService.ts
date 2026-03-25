@@ -70,7 +70,6 @@ export const fetchNews = async (): Promise<NewsItem[]> => {
   ];
 
   const fetchFeed = async (feed: string): Promise<NewsItem[]> => {
-    console.log(`Fetching feed: ${feed}`);
     const feedData = await parser.parseURL(feed);
     return Promise.all(
       feedData.items.map(async item => {
@@ -85,7 +84,8 @@ export const fetchNews = async (): Promise<NewsItem[]> => {
         }
 
         // Combine NLP/keyword tags and RSS tags, deduplicate, and limit to 10
-        const nlpTags = getTagsForNews(item.title || '');
+        const description = item.contentSnippet || item.summary || item.content || '';
+        const nlpTags = getTagsForNews(`${item.title || ''} ${description}`);
         const tags = [...rssTags, ...nlpTags]
           .filter((tag, idx, arr) => tag && arr.indexOf(tag) === idx)
           .slice(0, 10);
@@ -94,7 +94,7 @@ export const fetchNews = async (): Promise<NewsItem[]> => {
           id: item.guid || item.link || Math.random().toString(),
           title: decodeEntities(item.title || ''),
           sources: [{ url: item.link || '', publisher: feedData.title || '' }],
-          stressLevel: determineStressLevel(item.title || ''),
+          stressLevel: determineStressLevel(item.title || '', item.contentSnippet || item.summary || item.content || ''),
           date: item.pubDate || new Date().toISOString(),
           tags: tags.length ? tags : ['General'],
         };
@@ -107,6 +107,10 @@ export const fetchNews = async (): Promise<NewsItem[]> => {
 
   const allNews: NewsItem[] = [];
   const seenUrls = new Set<string>();
+  const seenTitles = new Set<string>();
+
+  const normalizeTitle = (title: string) =>
+    title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 60);
 
   results.forEach((result, i) => {
     if (result.status === 'rejected') {
@@ -115,8 +119,11 @@ export const fetchNews = async (): Promise<NewsItem[]> => {
     }
     result.value.forEach(item => {
       const url = item.sources[0].url;
-      if (!seenUrls.has(url)) {
+      const titleKey = normalizeTitle(item.title);
+      const wordCount = item.title.trim().split(/\s+/).length;
+      if (!seenUrls.has(url) && !seenTitles.has(titleKey) && wordCount >= 4) {
         seenUrls.add(url);
+        seenTitles.add(titleKey);
         allNews.push(item);
       }
     });
@@ -130,23 +137,28 @@ export const fetchNews = async (): Promise<NewsItem[]> => {
 const decodeEntities = (title: string): string => {
   return title
     .replace(/<[^>]+>/g, '')
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
     .replace(/&[^;]+;/g, match => {
       const entities: { [key: string]: string } = {
-        '’': '’',
-        '‘': '’',
-        '"': '"',
-        '&': '&',
-        '<': '<',
-        '>': '>',
-        ' ': ' ',
+        '&apos;': "'",
+        '&lsquo;': '\u2018',
+        '&rsquo;': '\u2019',
+        '&ldquo;': '\u201C',
+        '&rdquo;': '\u201D',
+        '&amp;': '&',
+        '&lt;': '<',
+        '&gt;': '>',
+        '&nbsp;': ' ',
       };
       return entities[match] || match;
     })
     .trim();
 };
 
-const determineStressLevel = (title: string): 'veryLow' | 'low' | 'medium' | 'high' | 'veryHigh' => {
-  const analysis = sentiment.analyze(title);
+const determineStressLevel = (title: string, description = ''): 'veryLow' | 'low' | 'medium' | 'high' | 'veryHigh' => {
+  const text = `${title} ${decodeEntities(description)}`;
+  const analysis = sentiment.analyze(text);
   const score = analysis.score;
 
   if (score <= -3) return 'veryHigh';
